@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Nota</title>
+    <title>Editar Nota</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Crear Nota</h1>
+        <h1>Editar Nota</h1>
         <div id="alertContainer"></div>
 
         <div class="card">
-            <form id="formNota">
+            <form id="formEditar">
                 <div class="form-group">
                     <label for="titulo">Título</label>
                     <input type="text" id="titulo" placeholder="Título de la nota" required>
@@ -22,7 +22,7 @@
                     <textarea id="contenido" placeholder="Escribe tu nota aquí..." required></textarea>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button type="submit" class="btn btn-primary">Guardar Nota</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Nota</button>
                     <button type="button" class="btn btn-ia" id="btnMejorarIA">Mejorar con IA</button>
                 </div>
             </form>
@@ -30,15 +30,32 @@
 
         <div class="nav">
             <a href="ver.html" class="btn btn-outline">Ver Notas</a>
+            <a href="index.html" class="btn btn-outline">Crear Nota</a>
         </div>
     </div>
 
     <script src="js/app.js"></script>
     <script>
-        const form = document.getElementById('formNota');
+        const params = new URLSearchParams(window.location.search);
+        const notaId = params.get('id');
+        const form = document.getElementById('formEditar');
         const tituloInput = document.getElementById('titulo');
         const contenidoInput = document.getElementById('contenido');
         const btnMejorar = document.getElementById('btnMejorarIA');
+
+        if (!notaId) {
+            showAlert('ID de nota no proporcionado', 'error');
+        }
+
+        async function cargarNota() {
+            try {
+                const nota = await apiRequest(`/notas/${notaId}`);
+                tituloInput.value = nota.titulo;
+                contenidoInput.value = nota.contenido;
+            } catch (error) {
+                showAlert('Error al cargar la nota: ' + error.message, 'error');
+            }
+        }
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -51,12 +68,11 @@
             }
 
             try {
-                await apiRequest('/notas', {
-                    method: 'POST',
+                await apiRequest(`/notas/${notaId}`, {
+                    method: 'PUT',
                     body: JSON.stringify({ titulo, contenido })
                 });
-                showAlert('Nota guardada correctamente');
-                form.reset();
+                showAlert('Nota actualizada correctamente');
             } catch (error) {
                 showAlert('Error: ' + error.message, 'error');
             }
@@ -86,6 +102,8 @@
                 btnMejorar.textContent = 'Mejorar con IA';
             }
         });
+
+        window.onload = cargarNota;
     </script>
 </body>
 </html>

@@ -2,77 +2,69 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ver Notas</title>
-
-    <style>
-        body {
-            font-family: Arial;
-            background-color: #f4f4f4;
-            padding: 20px;
-        }
-
-        h1 {
-            color: #333;
-        }
-
-        #listaNotas {
-            margin-top: 20px;
-        }
-
-        .nota {
-            background: white;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
-        }
-
-        a {
-            display: inline-block;
-            margin-top: 15px;
-        }
-    </style>
-
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <div class="container">
+        <h1>Lista de Notas</h1>
+        <div id="alertContainer"></div>
 
-    <h1>Lista de Notas</h1>
+        <div id="listaNotas">
+            <div class="loading"><div class="spinner"></div><p>Cargando notas...</p></div>
+        </div>
 
-    <div id="listaNotas">
-        <p>Cargando notas...</p>
+        <div class="nav">
+            <a href="index.html" class="btn btn-outline">Crear Nota</a>
+        </div>
     </div>
 
-    <a href="index.html">Crear Nota</a>
-
-    <!-- SCRIPT -->
+    <script src="js/app.js"></script>
     <script>
     async function cargarNotas() {
+        const contenedor = document.getElementById('listaNotas');
         try {
-            const respuesta = await fetch('http://127.0.0.1:8000/notas');
-            const notas = await respuesta.json();
+            const notas = await apiRequest('/notas');
+            contenedor.innerHTML = '';
 
-            const contenedor = document.getElementById('listaNotas');
-            contenedor.innerHTML = "";
+            if (notas.length === 0) {
+                contenedor.innerHTML = '<div class="card"><p style="color: var(--text-light);">No hay notas aún.</p></div>';
+                return;
+            }
 
             notas.forEach(n => {
                 const div = document.createElement('div');
-                div.className = "nota";
-
+                div.className = 'nota';
+                const fecha = n.fecha ? new Date(n.fecha).toLocaleString() : '';
                 div.innerHTML = `
                     <h3>${n.titulo}</h3>
                     <p>${n.contenido}</p>
+                    <div class="fecha">${fecha}</div>
+                    <div class="acciones">
+                        <a href="editar.html?id=${n.id}" class="btn btn-primary btn-sm">Editar</a>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarNota(${n.id})">Eliminar</button>
+                    </div>
                 `;
-
                 contenedor.appendChild(div);
             });
-
         } catch (error) {
-            console.log("Error:", error);
+            contenedor.innerHTML = `<div class="alert alert-error">Error al cargar notas: ${error.message}</div>`;
+        }
+    }
+
+    async function eliminarNota(id) {
+        if (!confirm('¿Estás seguro de eliminar esta nota?')) return;
+        try {
+            await apiRequest(`/notas/${id}`, { method: 'DELETE' });
+            showAlert('Nota eliminada correctamente');
+            cargarNotas();
+        } catch (error) {
+            showAlert('Error: ' + error.message, 'error');
         }
     }
 
     window.onload = cargarNotas;
     </script>
-
 </body>
 </html>
