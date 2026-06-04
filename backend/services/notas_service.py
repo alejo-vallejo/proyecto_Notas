@@ -1,7 +1,13 @@
 from backend.database import execute_query
 
 
-def get_all_notas():
+def get_all_notas(usuario_id: int = None):
+    if usuario_id:
+        return execute_query(
+            "SELECT * FROM notas WHERE usuario_id = %s ORDER BY id DESC",
+            (usuario_id,),
+            fetch_all=True
+        )
     return execute_query(
         "SELECT * FROM notas ORDER BY id DESC",
         fetch_all=True

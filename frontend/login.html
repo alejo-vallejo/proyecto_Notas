@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .auth-container {
+      max-width: 420px;
+      margin: 60px auto;
+    }
+    .auth-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px 28px;
+      box-shadow: var(--shadow-lg);
+    }
+    .auth-logo {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin: 0 auto 20px;
+    }
+    .auth-box h2 {
+      text-align: center;
+      font-size: 1.4rem;
+      margin-bottom: 4px;
+    }
+    .auth-box .subtitle {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+    }
+    .auth-toggle {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+    .auth-toggle a {
+      color: var(--primary-light);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .auth-toggle a:hover {
+      text-decoration: underline;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="/" class="navbar-brand">
+        <span class="navbar-brand-icon">&#9997;</span>
+        Mis Notas
+      </a>
+      <div class="navbar-links">
+        <a href="/">Inicio</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container auth-container">
+    <div class="auth-box">
+      <div class="auth-logo">&#128274;</div>
+
+      <div id="alertContainer"></div>
+
+      <!-- Login -->
+      <div id="loginForm">
+        <h2>Iniciar sesión</h2>
+        <p class="subtitle">Accede a tus notas personales</p>
+        <form id="formLogin">
+          <div class="form-group">
+            <label for="loginNombre">Usuario</label>
+            <input type="text" id="loginNombre" placeholder="Tu nombre de usuario" required>
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Contraseña</label>
+            <input type="password" id="loginPassword" placeholder="Tu contraseña" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Iniciar sesión</button>
+        </form>
+        <div class="auth-toggle">
+          ¿No tienes cuenta? <a href="#" id="showRegister">Crear cuenta</a>
+        </div>
+      </div>
+
+      <!-- Register -->
+      <div id="registerForm" class="hidden">
+        <h2>Crear cuenta</h2>
+        <p class="subtitle">Regístrate para guardar tus notas</p>
+        <form id="formRegister">
+          <div class="form-group">
+            <label for="regNombre">Usuario</label>
+            <input type="text" id="regNombre" placeholder="Elige un nombre de usuario" required>
+          </div>
+          <div class="form-group">
+            <label for="regPassword">Contraseña</label>
+            <input type="password" id="regPassword" placeholder="Crea una contraseña" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Crear cuenta</button>
+        </form>
+        <div class="auth-toggle">
+          ¿Ya tienes cuenta? <a href="#" id="showLogin">Iniciar sesión</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('showRegister').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.remove('hidden');
+    });
+
+    document.getElementById('showLogin').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('registerForm').classList.add('hidden');
+      document.getElementById('loginForm').classList.remove('hidden');
+    });
+
+    document.getElementById('formLogin').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('loginNombre').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      if (!nombre || !password) {
+        showAlert('Todos los campos son obligatorios', 'error');
+        return;
+      }
+
+      try {
+        const user = await apiRequest('/usuarios/login', {
+          method: 'POST',
+          body: JSON.stringify({ nombre, password })
+        });
+        setUsuario(user);
+        window.location.href = '/ver';
+      } catch (error) {
+        showAlert('Credenciales inválidas', 'error');
+      }
+    });
+
+    document.getElementById('formRegister').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('regNombre').value.trim();
+      const password = document.getElementById('regPassword').value.trim();
+
+      if (!nombre || !password) {
+        showAlert('Todos los campos son obligatorios', 'error');
+        return;
+      }
+
+      try {
+        const user = await apiRequest('/usuarios/registro', {
+          method: 'POST',
+          body: JSON.stringify({ nombre, password })
+        });
+        setUsuario(user);
+        window.location.href = '/ver';
+      } catch (error) {
+        showAlert(error.message, 'error');
+      }
+    });
+  </script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

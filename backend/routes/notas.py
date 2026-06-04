@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from backend.schemas import NotaCreate, NotaUpdate
 from backend.services.notas_service import (
     get_all_notas,
@@ -12,8 +12,8 @@ router = APIRouter(prefix="/notas", tags=["Notas"])
 
 
 @router.get("")
-def listar_notas():
-    notas = get_all_notas()
+def listar_notas(usuario_id: int = Query(None)):
+    notas = get_all_notas(usuario_id)
     return notas
 
 

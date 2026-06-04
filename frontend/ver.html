@@ -1,70 +1,210 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ver Notas</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Notas</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .nav-auth {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-auth .user-name {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+    .nav-auth .btn {
+      padding: 7px 16px;
+      font-size: 0.8rem;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Lista de Notas</h1>
-        <div id="alertContainer"></div>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="/" class="navbar-brand">
+        <span class="navbar-brand-icon">&#9997;</span>
+        Mis Notas
+      </a>
+      <div class="navbar-links">
+        <a href="/">Inicio</a>
+        <a href="/ver" class="active">Ver Notas</a>
+      </div>
+      <div class="nav-auth" id="navAuth"></div>
+    </div>
+  </nav>
 
-        <div id="listaNotas">
-            <div class="loading"><div class="spinner"></div><p>Cargando notas...</p></div>
-        </div>
-
-        <div class="nav">
-            <a href="index.html" class="btn btn-outline">Crear Nota</a>
-        </div>
+  <div class="container">
+    <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+      <div>
+        <h1>Mis Notas</h1>
+        <p>Todas tus notas en un solo lugar</p>
+      </div>
+      <button class="btn btn-primary" onclick="mostrarFormulario()">+ Nueva nota</button>
     </div>
 
-    <script src="js/app.js"></script>
-    <script>
+    <div id="alertContainer"></div>
+
+    <div id="formContainer" style="display:none;">
+      <div class="card">
+        <form id="formNota">
+          <div class="form-group">
+            <label for="titulo">Título</label>
+            <input type="text" id="titulo" placeholder="Título de la nota" required>
+          </div>
+          <div class="form-group">
+            <label for="contenido">Contenido</label>
+            <textarea id="contenido" placeholder="Escribe tu nota aquí..." required></textarea>
+          </div>
+          <div class="btn-group">
+            <button type="submit" class="btn btn-primary">Guardar Nota</button>
+            <button type="button" class="btn btn-ia" id="btnMejorarIA">Mejorar con IA</button>
+            <button type="button" class="btn btn-secondary" onclick="ocultarFormulario()">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="listaNotas">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Cargando notas...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    redirectIfNotLogged();
+
+    const usuario = getUsuario();
+    const navAuth = document.getElementById('navAuth');
+    navAuth.innerHTML = `
+      <span class="user-name">${usuario.nombre}</span>
+      <button class="btn btn-secondary btn-sm" onclick="logout()">Cerrar sesión</button>
+    `;
+
+    const form = document.getElementById('formNota');
+    const tituloInput = document.getElementById('titulo');
+    const contenidoInput = document.getElementById('contenido');
+    const btnMejorar = document.getElementById('btnMejorarIA');
+
+    function mostrarFormulario() {
+      document.getElementById('formContainer').style.display = 'block';
+      document.getElementById('formContainer').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function ocultarFormulario() {
+      document.getElementById('formContainer').style.display = 'none';
+      form.reset();
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const titulo = tituloInput.value.trim();
+      const contenido = contenidoInput.value.trim();
+
+      if (!titulo || !contenido) {
+        showAlert('Todos los campos son obligatorios', 'error');
+        return;
+      }
+
+      try {
+        await apiRequest('/notas', {
+          method: 'POST',
+          body: JSON.stringify({ titulo, contenido, usuario_id: usuario.id })
+        });
+        showAlert('Nota guardada correctamente');
+        form.reset();
+        ocultarFormulario();
+        cargarNotas();
+      } catch (error) {
+        showAlert('Error: ' + error.message, 'error');
+      }
+    });
+
+    btnMejorar.addEventListener('click', async () => {
+      const texto = contenidoInput.value.trim();
+      if (!texto) {
+        showAlert('Escribe algo en el contenido primero', 'error');
+        return;
+      }
+
+      btnMejorar.disabled = true;
+      btnMejorar.textContent = 'Mejorando...';
+
+      try {
+        const result = await apiRequest('/ia', {
+          method: 'POST',
+          body: JSON.stringify({ texto })
+        });
+        contenidoInput.value = result.texto_mejorado;
+        showAlert('Texto mejorado con IA');
+      } catch (error) {
+        showAlert('Error al mejorar con IA: ' + error.message, 'error');
+      } finally {
+        btnMejorar.disabled = false;
+        btnMejorar.textContent = 'Mejorar con IA';
+      }
+    });
+
     async function cargarNotas() {
-        const contenedor = document.getElementById('listaNotas');
-        try {
-            const notas = await apiRequest('/notas');
-            contenedor.innerHTML = '';
+      const contenedor = document.getElementById('listaNotas');
+      try {
+        const notas = await apiRequest('/notas?usuario_id=' + usuario.id);
+        contenedor.innerHTML = '';
 
-            if (notas.length === 0) {
-                contenedor.innerHTML = '<div class="card"><p style="color: var(--text-light);">No hay notas aún.</p></div>';
-                return;
-            }
-
-            notas.forEach(n => {
-                const div = document.createElement('div');
-                div.className = 'nota';
-                const fecha = n.fecha ? new Date(n.fecha).toLocaleString() : '';
-                div.innerHTML = `
-                    <h3>${n.titulo}</h3>
-                    <p>${n.contenido}</p>
-                    <div class="fecha">${fecha}</div>
-                    <div class="acciones">
-                        <a href="editar.html?id=${n.id}" class="btn btn-primary btn-sm">Editar</a>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarNota(${n.id})">Eliminar</button>
-                    </div>
-                `;
-                contenedor.appendChild(div);
-            });
-        } catch (error) {
-            contenedor.innerHTML = `<div class="alert alert-error">Error al cargar notas: ${error.message}</div>`;
+        if (notas.length === 0) {
+          contenedor.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">&#128203;</div>
+              <h3>No hay notas aún</h3>
+              <p>Crea tu primera nota para empezar</p>
+              <button class="btn btn-primary" onclick="mostrarFormulario()">Crear primera nota</button>
+            </div>`;
+          return;
         }
+
+        notas.forEach(n => {
+          const div = document.createElement('div');
+          div.className = 'nota';
+          const fecha = n.fecha ? new Date(n.fecha).toLocaleString('es', {
+            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          }) : '';
+          div.innerHTML = `
+            <div class="nota-header">
+              <h3>${escaparHTML(n.titulo)}</h3>
+            </div>
+            <p>${escaparHTML(n.contenido)}</p>
+            <div class="nota-meta">
+              <span>${fecha}</span>
+            </div>
+            <div class="nota-acciones">
+              <a href="/editar?id=${n.id}" class="btn btn-primary btn-sm">Editar</a>
+              <button class="btn btn-danger btn-sm" onclick="eliminarNota(${n.id})">Eliminar</button>
+            </div>
+          `;
+          contenedor.appendChild(div);
+        });
+      } catch (error) {
+        contenedor.innerHTML = `<div class="alert alert-error">Error al cargar notas: ${error.message}</div>`;
+      }
     }
 
     async function eliminarNota(id) {
-        if (!confirm('¿Estás seguro de eliminar esta nota?')) return;
-        try {
-            await apiRequest(`/notas/${id}`, { method: 'DELETE' });
-            showAlert('Nota eliminada correctamente');
-            cargarNotas();
-        } catch (error) {
-            showAlert('Error: ' + error.message, 'error');
-        }
+      if (!confirm('¿Estás seguro de eliminar esta nota?')) return;
+      try {
+        await apiRequest('/notas/' + id, { method: 'DELETE' });
+        showAlert('Nota eliminada correctamente');
+        cargarNotas();
+      } catch (error) {
+        showAlert('Error: ' + error.message, 'error');
+      }
     }
 
     window.onload = cargarNotas;
-    </script>
+  </script>
 </body>
 </html>
