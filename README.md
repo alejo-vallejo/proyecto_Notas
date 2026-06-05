@@ -7,14 +7,13 @@ API REST para gestión de notas personales con FastAPI, PostgreSQL e integració
 - **Backend:** Python + FastAPI
 - **Base de datos:** PostgreSQL
 - **Frontend:** HTML, CSS, JavaScript vanilla
-- **IA:** API compatible con OpenAI (Ollama, OpenAI, Hugging Face)
+- **IA:** API compatible con OpenAI (Gemini, Ollama, OpenAI)
 
 ## Estructura del Proyecto
 
 ```
 proyecto_notas/
 ├── backend/
-│   ├── main.py              # Punto de entrada de FastAPI
 │   ├── config.py             # Configuración (DB, IA)
 │   ├── database.py           # Conexión y helpers de PostgreSQL
 │   ├── schemas.py            # Modelos Pydantic de validación
@@ -28,16 +27,20 @@ proyecto_notas/
 │   │   └── ia_service.py     # Integración con IA
 │   └── utils/
 ├── frontend/
-│   ├── index.html            # Crear nota + Mejorar con IA
-│   ├── ver.html              # Listar, editar y eliminar notas
+│   ├── index.html            # Página de inicio / landing
+│   ├── ver.html              # Listar, crear y eliminar notas
 │   ├── editar.html           # Editar nota + Mejorar con IA
+│   ├── login.html            # Inicio de sesión / registro
 │   ├── css/
-│   │   └── style.css         # Estilos globales
+│   │   └── style.css         # Estilos globales (tema oscuro)
 │   └── js/
 │       └── app.js            # Cliente API y utilidades
 ├── database/
 │   └── database.sql          # Esquema y datos de prueba
+├── main.py                   # Punto de entrada (API + frontend estático)
+├── docker-compose.yml        # Entorno PostgreSQL con Docker
 ├── requirements.txt
+├── .env.example              # Plantilla de variables de entorno
 └── README.md
 ```
 
@@ -92,24 +95,12 @@ Esto crea las tablas `usuarios` y `notas` e inserta datos de prueba.
 Con el entorno virtual activado:
 
 ```bash
-fastapi dev backend/main.py
+python main.py
 ```
 
 El servidor se ejecutará en: **http://127.0.0.1:8000**
 
 Documentación interactiva: **http://127.0.0.1:8000/docs**
-
-## Ejecutar el Frontend
-
-Abre los archivos HTML directamente en el navegador:
-
-```bash
-# Desde Linux con WSL
-explorer.exe frontend/index.html
-explorer.exe frontend/ver.html
-
-# O simplemente abre los archivos con tu navegador
-```
 
 ## Endpoints de la API
 
@@ -144,29 +135,55 @@ El botón **"Mejorar con IA"** en los formularios de crear y editar nota envía 
 
 ### Configurar la IA
 
-El sistema usa una API compatible con OpenAI. Por defecto intenta conectarse a **Ollama** (local y gratuito).
+Copia el archivo de ejemplo y ajústalo:
 
-#### Opción 1: Ollama (recomendado, gratuito)
+```bash
+cp .env.example .env
+```
+
+El sistema usa una API compatible con OpenAI. Por defecto usa **Google Gemini**.
+
+#### Opción 1: Google Gemini (por defecto, gratuito)
+
+1. Obtén tu API key gratuita en [Google AI Studio](https://aistudio.google.com/apikey)
+2. Asígnala en el archivo `.env`:
+
+```
+IA_API_KEY=tu-api-key-de-gemini
+```
+
+Los valores por defecto ya apuntan a Gemini:
+- `IA_API_URL`: `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
+- `IA_MODEL`: `gemini-2.0-flash`
+
+#### Opción 2: Ollama (local, gratuito, sin API key)
 
 1. Instala Ollama desde [ollama.ai](https://ollama.ai)
 2. Descarga un modelo: `ollama pull llama3`
 3. Asegúrate que Ollama esté corriendo: `ollama serve`
+4. Configura en `.env`:
 
-#### Opción 2: OpenAI
+```
+IA_API_URL=http://localhost:11434/v1/chat/completions
+IA_API_KEY=
+IA_MODEL=llama3
+```
+
+#### Opción 3: OpenAI
 
 ```bash
-export IA_API_URL="https://api.openai.com/v1/chat/completions"
-export IA_API_KEY="tu-api-key"
-export IA_MODEL="gpt-4o-mini"
+IA_API_URL=https://api.openai.com/v1/chat/completions
+IA_API_KEY=sk-tu-api-key
+IA_MODEL=gpt-4o-mini
 ```
 
 #### Variables de entorno
 
 | Variable | Descripción | Valor por defecto |
 |----------|-------------|-------------------|
-| `IA_API_URL` | URL de la API de IA | `http://localhost:11434/v1/chat/completions` |
-| `IA_API_KEY` | API Key (si requiere) | `""` |
-| `IA_MODEL` | Nombre del modelo | `llama3` |
+| `IA_API_URL` | URL de la API de IA | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` |
+| `IA_API_KEY` | API Key (requerida para Gemini/OpenAI) | `""` |
+| `IA_MODEL` | Nombre del modelo | `gemini-2.0-flash` |
 | `DB_HOST` | Host de PostgreSQL | `localhost` |
 | `DB_NAME` | Nombre de la base de datos | `notas_db` |
 | `DB_USER` | Usuario de PostgreSQL | `postgres` |
@@ -174,8 +191,8 @@ export IA_MODEL="gpt-4o-mini"
 
 ## Módulos del Backend
 
-### `backend/main.py`
-Punto de entrada de la aplicación. Configura CORS e incluye los routers.
+### `main.py` (raíz)
+Punto de entrada principal. Sirve el frontend estático e incluye todos los routers de la API.
 
 ### `backend/config.py`
 Centraliza todas las configuraciones usando variables de entorno.
